@@ -1,0 +1,60 @@
+/*Query 1 - basket_size_per_country*/
+WITH basket_data AS
+  (SELECT InvoiceId,
+          sum(UnitPrice) AS basket_amount,
+          sum(Quantity) AS basket_size
+   FROM InvoiceLine
+   GROUP BY 1)
+SELECT i.BillingCountry,
+       AVG(bd.basket_amount) AS avg_basket_amount,
+       avg(bd.basket_size) AS avg_basket_size,
+       sum(bd.basket_size) AS sum_quantity,
+       count(i.invoiceid) count_invoice
+FROM basket_data bd
+JOIN Invoice i ON bd.InvoiceId = i.InvoiceId
+GROUP BY i.BillingCountry
+
+/*Query 2 - most_profitable_album*/
+SELECT a.AlbumId,
+       a.Title,
+       sum(il.unitprice) AS profit,
+       count(il.unitprice) AS quantity_sold
+FROM Album a
+JOIN Track t ON a.AlbumId = t.AlbumId
+JOIN InvoiceLine il ON t.TrackId = il.TrackId
+GROUP BY a.AlbumId
+ORDER BY profit DESC
+LIMIT 5
+
+/*Query 3 - most_popular_genre_per_country*/
+WITH t1 AS
+  (SELECT i.billingcountry,
+          g.GenreId,
+          g.Name,
+          count(g.name) AS COUNT
+   FROM Genre g
+   JOIN Track t ON g.GenreId = t.GenreId
+   JOIN InvoiceLine il ON t.TrackId = il.TrackId
+   JOIN Invoice i ON il.InvoiceId = i.InvoiceId
+   GROUP BY i.billingcountry,
+            g.GenreId
+   ORDER BY i.billingcountry,
+            COUNT DESC)
+SELECT BillingCountry,
+       GenreId,
+       Name AS most_popular_genre,
+       max(COUNT) AS orders_number
+FROM t1
+GROUP BY BillingCountry
+
+/*Query 4 - best_sales_rep*/
+SELECT c.SupportRepId,
+       e.FirstName||' '||e.LastName AS NAMES,
+       e.HireDate,
+       count(i.InvoiceId) AS sales_done,
+       sum(i.total) AS profit_earned
+FROM invoice i
+JOIN customer c ON i.CustomerId = c.CustomerId
+JOIN Employee e ON c.SupportRepId = e.EmployeeId
+GROUP BY c.SupportRepId
+ORDER BY sales_done DESC
